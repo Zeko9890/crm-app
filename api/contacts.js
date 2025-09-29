@@ -1,38 +1,34 @@
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
+```js
+// api/contacts.js
+import express from "express";
+import cors from "cors";
 
-// Open SQLite DB
-async function openDb() {
-  return open({
-    filename: "./crm.db",
-    driver: sqlite3.Database,
-  });
-}
+// Create an Express app
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-export default async function handler(req, res) {
-  const db = await openDb();
+// Example contacts store (in-memory for now)
+let contacts = [];
 
-  // Create table if not exists
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS contacts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
-      email TEXT,
-      phone TEXT
-    )
-  `);
-
-  if (req.method === "GET") {
-    const contacts = await db.all("SELECT * FROM contacts ORDER BY id DESC");
-    res.json(contacts);
-  } else if (req.method === "POST") {
-    const { name, email, phone } = JSON.parse(req.body);
-    await db.run(
-      "INSERT INTO contacts (name, email, phone) VALUES (?, ?, ?)",
-      [name, email, phone]
-    );
-    res.json({ success: true, message: "Contact added" });
-  } else {
-    res.status(405).json({ error: "Method not allowed" });
+// POST /api/contacts → Add new contact
+app.post("/api/contacts", (req, res) => {
+  const { name, email, phone } = req.body;
+  if (!name || !email || !phone) {
+    return res.status(400).json({ error: "All fields are required" });
   }
-}
+
+  const newContact = { id: Date.now(), name, email, phone };
+  contacts.push(newContact);
+
+  res.status(201).json(newContact);
+});
+
+// GET /api/contacts → List all contacts
+app.get("/api/contacts", (req, res) => {
+  res.json(contacts);
+});
+
+// Export handler for Vercel
+export default app;
+```
